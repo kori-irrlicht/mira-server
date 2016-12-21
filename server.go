@@ -2,13 +2,27 @@ package main
 
 import (
 	"crypto/tls"
-	"log"
 	"time"
+
+	"github.com/sirupsen/logrus"
+)
+
+var (
+	srvLog *logrus.Entry
 )
 
 func main() {
+	setupLogger()
 	setup()
 	loop()
+}
+
+/**
+setupLogger initializes the logger
+*/
+func setupLogger() {
+	sl := logrus.New()
+	srvLog = sl.WithField("context", "server")
 }
 
 /**
@@ -17,23 +31,23 @@ setup initializes the server and loads the config
 func setup() {
 	cert, err := tls.LoadX509KeyPair("./cert.pem", "./key.pem")
 	if err != nil {
-		log.Printf("Server: load cert: %s", err)
+		srvLog.WithError(err).Error("Can't load cert")
 		return
 	}
 	config := tls.Config{Certificates: []tls.Certificate{cert}}
 	listener, err := tls.Listen("tcp", "192.168.20.15:8000", &config)
 	if err != nil {
-		log.Printf("Server: create listener: %s", err)
+		srvLog.WithError(err).Error("Can't create listener")
 		return
 	}
 
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Printf("Server: accept: %s", err)
+			srvLog.WithError(err).Error("Can't accept connection")
 			break
 		}
-		log.Printf("server: accepted from %s", conn.RemoteAddr())
+		srvLog.WithField("addr", conn.RemoteAddr()).Info("Connection accepted")
 	}
 
 }
